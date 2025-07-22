@@ -1,7 +1,7 @@
 from dash import hooks, dcc, set_props, Input, Output, State
 import dash
 import jwt
-from flask import request,redirect,make_response,abort
+from flask import request, redirect, make_response, abort
 from yarl import URL
 import feffery_utils_components as fuc
 from typing import Callable, Optional, Tuple, Dict
@@ -89,13 +89,10 @@ def setup_better_login_plugin(
         response = make_response(redirect(login_page_pathname))
         response.set_cookie('Authorization', '', expires=0)
         return response
-    
-    
-    
-    @hooks.route(name="")
+
+    @hooks.route(name='')
     def route_root():
-        """访问根路径，判断是否登录，如登录指向首页"""
-        from jwt.exceptions import ExpiredSignatureError
+        """访问根路径，判断是否登录，如登录指向首页，未登录则指向登录页"""
         auth_header = token_ if (token_ := request.headers.get('Authorization')) else request.cookies.get('Authorization')
         if not auth_header:
             return redirect(login_page_pathname)
@@ -106,19 +103,14 @@ def setup_better_login_plugin(
         if auth_type == 'Bearer':
             # jwt验证
             try:
-                payload = jwt.decode(
+                jwt.decode(
                     auth_token,
                     JWT_SERCRET,
                     algorithms=['HS256'],
                     options={'verify_exp': True},
                 )
-                access_data = jwt_decode(auth_token, verify_exp=verify_exp)
-            except ExpiredSignatureError:
-                return AccessFailType.EXPIRED
             except Exception:
-                return AccessFailType.INVALID
-        elif auth_type == AuthType.BASIC.value:
-            # Basic认证
-            return validate_basic(auth_token)
-
-
+                return redirect(logout_page_pathname)  # 通过route_logout调跳转到登录页
+            else:
+                return redirect(main_page_pathname)
+        abort(400)
